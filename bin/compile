@@ -78,17 +78,17 @@ mkdir -p "$BUILD_DIR"/.profile.d
 cat <<EOF >"$BUILD_DIR"/.profile.d/load-doppler-env.sh
 # #!/bin/sh
 
-PATH=$BUILD_DIR/doppler:\$PATH
-ENV_FILE_PATH=$BUILD_DIR/.env
+PATH=$HOME/doppler:\$PATH
+ENV_FILE=$HOME/.env
 
 if [ -z \${DOPPLER_TOKEN+x} ]; then
     echo "ERROR: DOPPLER_TOKEN must be set"
     exit 1
 elif [ -z \${DOPPLER_PROJECT+x} ] || [ -z \${DOPPLER_CONFIG+x} ]; then
-    doppler secrets download --token \$DOPPLER_TOKEN --no-file --format env > \$ENV_FILE_PATH
+    doppler secrets download --token \$DOPPLER_TOKEN --no-file --format env > \$ENV_FILE
 else
-    doppler secrets download --token \$DOPPLER_TOKEN -p \$DOPPLER_PROJECT -c \$DOPPLER_CONFIG --no-file --format env > \$ENV_FILE_PATH
+    doppler secrets download --token \$DOPPLER_TOKEN -p \$DOPPLER_PROJECT -c \$DOPPLER_CONFIG --no-file --format env > \$ENV_FILE
 fi;
 
-source \$ENV_FILE_PATH
+source \$ENV_FILE
 EOF
