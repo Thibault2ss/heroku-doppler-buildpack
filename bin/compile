@@ -1,0 +1,94 @@
+#!/bin/sh
+# bin/compile <build-dir> <cache-dir> <env-dir>
+
+set -o errexit    # always exit on error
+set -o pipefail   # don't ignore exit codes when piping output
+set -o nounset    # fail on unset variables
+
+# Parse args
+BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$3
+
+# identify OS
+os="unknown"
+uname_os=$(uname -s)
+if [ "$uname_os" = "Darwin" ]; then
+  os="macos"
+elif [ "$uname_os" = "Linux" ]; then
+  os="linux"
+elif [ "$uname_os" = "FreeBSD" ]; then
+  os="freebsd"
+elif [ "$uname_os" = "OpenBSD" ]; then
+  os="openbsd"
+elif [ "$uname_os" = "NetBSD" ]; then
+  os="netbsd"
+else
+  echo "ERROR: Unsupported OS '$uname_os'"
+  echo ""
+  echo "Please report this issue:"
+  echo "https://github.com/DopplerHQ/cli/issues/new?template=bug_report.md&title=[BUG]%20Unsupported%20OS"
+  exit 1
+fi
+
+echo "Detected OS '$os'"
+
+# identify arch
+arch="unknown"
+uname_machine=$(uname -m)
+if [ "$uname_machine" = "i386" ] || [ "$uname_machine" = "i686" ]; then
+  arch="i386"
+elif [ "$uname_machine" = "amd64" ] || [ "$uname_machine" = "x86_64" ]; then
+  arch="amd64"
+elif [ "$uname_machine" = "armv6" ] || [ "$uname_machine" = "armv6l" ]; then
+  arch="armv6"
+elif [ "$uname_machine" = "armv7" ] || [ "$uname_machine" = "armv7l" ]; then
+  arch="armv7"
+# armv8?
+elif [ "$uname_machine" = "arm64" ]; then
+  arch="arm64"
+else
+  echo "ERROR: Unsupported architecture '$uname_machine'"
+  echo ""
+  echo "Please report this issue:"
+  echo "https://github.com/DopplerHQ/cli/issues/new?template=bug_report.md&title=[BUG]%20Unsupported%20architecture"
+  exit 1
+fi
+
+echo "Detected architecture '$arch'"
+
+DOWNLOAD_URL="https://cli.doppler.com/download?os=$os&arch=$arch&format=tar"
+
+filename="doppler-download.tar.gz"
+
+curl --silent --retry 3 -o "$filename" -LN -D - "$DOWNLOAD_URL"
+
+mkdir -p "$BUILD_DIR"/doppler
+tar -zxf $filename -C $BUILD_DIR/doppler
+
+chmod +x $BUILD_DIR/doppler/doppler
+
+# cd "$BUILD_DIR" || exit
+
+# DOPPLER_TOKEN=$(cat $ENV_DIR/DOPPLER_TOKEN)
+
+# ./doppler secrets download --token $DOPPLER_TOKEN --no-file --format env > .env
+
+mkdir -p "$BUILD_DIR"/.profile.d
+cat <<EOF >"$BUILD_DIR"/.profile.d/load-doppler-env.sh
+# #!/bin/sh
+
+PATH=$BUILD_DIR/doppler:\$PATH
+ENV_FILE_PATH=$BUILD_DIR/.env
+
+if [ -z \${DOPPLER_TOKEN+x} ]; then
+    echo "ERROR: DOPPLER_TOKEN must be set"
+    exit 1
+elif [ -z \${DOPPLER_PROJECT+x} ] || [ -z \${DOPPLER_CONFIG+x} ]; then
+    doppler secrets download --token \$DOPPLER_TOKEN --no-file --format env > \$ENV_FILE_PATH
+else
+    doppler secrets download --token \$DOPPLER_TOKEN -p \$DOPPLER_PROJECT -c \$DOPPLER_CONFIG --no-file --format env > \$ENV_FILE_PATH
+fi;
+
+source \$ENV_FILE_PATH
+EOF
