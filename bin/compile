@@ -90,5 +90,7 @@ else
     doppler secrets download --token \$DOPPLER_TOKEN -p \$DOPPLER_PROJECT -c \$DOPPLER_CONFIG --no-file --format env > \$ENV_FILE
 fi;
 
+printenv >> \$ENV_FILE # variables set in heroku directly will tak eprecedence over doppler variables
+
 source \$ENV_FILE
 EOF
