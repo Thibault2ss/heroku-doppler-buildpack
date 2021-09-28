@@ -90,9 +90,8 @@ else
     doppler secrets download --token \$DOPPLER_TOKEN -p \$DOPPLER_PROJECT -c \$DOPPLER_CONFIG --no-file --format env > \$ENV_FILE
 fi;
 
-env | sed 's/=\(.*\)/="\1"/' >> \$ENV_FILE # variables set in heroku directly will tak eprecedence over doppler variables
+env | sed "s/=\(.*\)/='\1'/" >> \$ENV_FILE # variables set in heroku directly will tak eprecedence over doppler variables
 
-set -a
 source \$ENV_FILE
-set +a
+
 EOF
