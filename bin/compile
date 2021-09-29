@@ -68,12 +68,6 @@ tar -zxf $filename -C $BUILD_DIR/doppler
 
 chmod +x $BUILD_DIR/doppler/doppler
 
-# cd "$BUILD_DIR" || exit
-
-# DOPPLER_TOKEN=$(cat $ENV_DIR/DOPPLER_TOKEN)
-
-# ./doppler secrets download --token $DOPPLER_TOKEN --no-file --format env > .env
-
 mkdir -p "$BUILD_DIR"/.profile.d
 cat <<EOF >"$BUILD_DIR"/.profile.d/load-doppler-env.sh
 # #!/bin/sh
@@ -90,8 +84,16 @@ else
     doppler secrets download --token \$DOPPLER_TOKEN -p \$DOPPLER_PROJECT -c \$DOPPLER_CONFIG --no-file --format env > \$ENV_FILE
 fi;
 
-env | sed "s/=\(.*\)/='\1'/" >> \$ENV_FILE # variables set in heroku directly will tak eprecedence over doppler variables
+# replace \$ with \\\$ (except for \$PORT)
+(sed 's/\\\$/\\\\$/g' \$ENV_FILE | sed 's/\\\\\\\$PORT/\\\$PORT/g') > \${ENV_FILE}_formatted
+rm \$ENV_FILE
+mv \${ENV_FILE}_formatted \$ENV_FILE
 
+# Override doppler variables with variables already set in heroku env
+env | sed 's/=\(.*\)/="\1"/' >> \$ENV_FILE
+
+set -a
 source \$ENV_FILE
+set +a
 
 EOF
